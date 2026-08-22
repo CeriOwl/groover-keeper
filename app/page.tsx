@@ -8,7 +8,7 @@ export default function Home() {
       <main className="bg-[#2C191D] w-full h-screen font-courier-prime grid place-content-center">
         <div className="relative bg-[#FDFBF5] border-2 border-[#2C191D] w-full shadow-boxes-big shadow-[#D36951] p-10">
           <div className="flex flex-col items-center gap-y-4">
-            <h1 className="font-bevan font-black text-4xl italic">Groove Keeper</h1>
+            <h1 className="font-bevan font-medium text-4xl italic">Groove Keeper</h1>
             <span className="uppercase text-xs font-bold text-[#BD5740] leading-1.5 tracking-widest">staff access only</span>
           </div>
           <form action={action} className="flex flex-col gap-y-4 pt-10">
