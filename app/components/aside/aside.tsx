@@ -2,7 +2,7 @@ import { NavLinks } from "./nav-links"
 
 export const Aside = () => {
   return (
-    <aside className="px-6 py-10 max-w-60 w-full bg-[#2C191D] font-courier-prime flex flex-col justify-between min-h-screen fixed">
+    <aside className="px-6 py-10 w-full bg-[#2C191D] font-courier-prime flex flex-col justify-between max-h-screen sticky top-0">
       <section className="flex flex-col gap-y-10">
         <div className="flex flex-col gap-y-2">
           <h2 className="font-bevan font-medium italic text-3xl text-[#FDFBF5]">Groove & Grind</h2>

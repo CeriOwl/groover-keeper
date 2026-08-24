@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex flex-row w-full h-full">
+    <div className="grid grid-cols-[200px_1fr]">
       <Aside />
       {children}
     </div>
