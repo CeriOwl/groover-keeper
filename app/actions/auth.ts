@@ -23,11 +23,16 @@ export async function signup(state: FormState, formData: FormData) {
       eq(staffTable.username, `${formData.get("username")}`),
       eq(staffTable.password, `${formData.get("password")}`),
     ))
+
+  if (!userId[0]) {
+    return { message: "Username and password do not match a staff account." }
+  }
+
   await createSession(userId[0].id)
   redirect("/dashboard")
 }
 
 export async function logout() {
   await deleteSession()
-  redirect('/login')
+  redirect('/')
 }

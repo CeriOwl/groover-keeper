@@ -1,13 +1,59 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  --color-paper: #fdfbf5;
+  --color-surface: #e9e3c8;
+  --color-surface-2: #f5f1de;
+  --color-ink: #2c191d;
+  --color-rust: #bd5740;
+  --color-signal: #e3b505;
+  --color-muted: #5b4c4f;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-aleo: var(--font-aleo), sans-serif;
   --font-bevan: var(--font-bevan);
   --font-courier-prime: var(--font-courier-prime);
-  --shadow-boxes-big: 10px 10px 0px 1px;
-  --shadow-boxes-small: 5px 5px 0px 1px;
+  --shadow-boxes-big: 10px 10px 0px 1px #2c191d;
+  --shadow-boxes-small: 5px 5px 0px 1px #2c191d;
+  --shadow-boxes-tiny: 3px 3px 0px 0px #2c191d;
+}
+
+@layer base {
+  body {
+    background-color: #e9e3c8;
+    color: #2c191d;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid #2c191d;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .crate-shadow {
+    box-shadow: 5px 5px 0px 1px #2c191d;
+  }
+
+  .crate-shadow-lg {
+    box-shadow: 10px 10px 0px 1px #2c191d;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

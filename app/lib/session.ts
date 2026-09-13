@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 const secretKey = process.env.SESSION_SECRET
 const encodeKey = new TextEncoder().encode(secretKey)
 
-export async function encrypt(payload: { userId: string, expiresAt: Date }) {
+export async function encrypt(payload: { sub: string, expiresAt: Date }) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -24,10 +24,9 @@ export async function decrypt(session: string | undefined = "") {
   }
 }
 
-
 export async function createSession(userId: string) {
   const expiresAt = new Date(Date.now() + 60 * 1000)
-  const session = await encrypt({ userId, expiresAt })
+  const session = await encrypt({ sub: userId, expiresAt })
   const cookieStore = await cookies()
   cookieStore.set("session", session, {
     httpOnly: true,
