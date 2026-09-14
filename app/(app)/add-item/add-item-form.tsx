@@ -1,51 +1,104 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { Field, Input, Select, Textarea } from "@/app/components/ui/field"
 import { Panel } from "@/app/components/ui/panel"
+import { conditions, type Condition, type Ownership } from "@/app/lib/view"
 import {
-  discogsResults,
-  type DiscogsResult,
-} from "@/app/lib/mock-data"
-import {
-  conditions,
-  formatShort,
-  type Condition,
-  type Ownership,
-} from "@/app/lib/view"
+  searchAlbum,
+  type DiscogsSearchResult,
+} from "@/app/lib/add-item/searchAlbum"
 
 type FormatFilter = "any" | "vinyl" | "cd"
+
+const parseTitle = (title: string) => {
+  const [artist, ...rest] = title.split(" - ")
+  if (rest.length === 0) return { artist: "", title }
+  return { artist, title: rest.join(" - ") }
+}
+
+const CoverArt = ({
+  src,
+  className,
+}: {
+  src: string
+  className: string
+}) => {
+  if (!src) {
+    return (
+      <div
+        className={`${className} flex shrink-0 items-center justify-center border-2 border-ink bg-surface-2`}
+      >
+        <span className="font-courier-prime text-[10px] tracking-widest uppercase text-muted">
+          No art
+        </span>
+      </div>
+    )
+  }
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={120}
+      height={120}
+      className={`${className} shrink-0 border-2 border-ink object-cover`}
+    />
+  )
+}
+
+const Barcodes = ({ codes }: { codes: string[] }) => {
+  const entries = codes.filter(Boolean)
+  if (entries.length === 0) return null
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <span className="font-courier-prime text-[10px] font-bold tracking-widest uppercase text-muted">
+        Barcodes
+      </span>
+      {entries.map((code, i) => (
+        <span
+          key={`${code}-${i}`}
+          className="border border-ink/30 bg-surface-2 px-1.5 py-0.5 font-courier-prime text-[10px] text-ink"
+        >
+          {code}
+        </span>
+      ))}
+    </span>
+  )
+}
 
 const ownershipChoices: {
   key: Ownership
   title: string
   description: string
 }[] = [
-  {
-    key: "house",
-    title: "House copy",
-    description: "Bought by the café and owned outright.",
-  },
-  {
-    key: "loan",
-    title: "On loan",
-    description: "A customer's record, left with us to play.",
-  },
-  {
-    key: "donation",
-    title: "Donation",
-    description: "Given to the café to keep by a customer.",
-  },
-]
+    {
+      key: "house",
+      title: "House copy",
+      description: "Bought by the café and owned outright.",
+    },
+    {
+      key: "loan",
+      title: "On loan",
+      description: "A customer's record, left with us to play.",
+    },
+    {
+      key: "donation",
+      title: "Donation",
+      description: "Given to the café to keep by a customer.",
+    },
+  ]
 
 export const AddItemForm = () => {
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("any")
   const [query, setQuery] = useState("")
-  const [selected, setSelected] = useState<DiscogsResult | null>(null)
+  const [selected, setSelected] = useState<DiscogsSearchResult | null>(null)
 
+  const [results, setResults] = useState<DiscogsSearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [ownership, setOwnership] = useState<Ownership>("house")
   const [ownerName, setOwnerName] = useState("")
   const [ownerContact, setOwnerContact] = useState("")
@@ -54,22 +107,34 @@ export const AddItemForm = () => {
   const [notes, setNotes] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return discogsResults.filter((result) => {
-      const matchesQuery =
-        !q ||
-        [result.title, result.artist, result.label, result.genre].some(
-          (value) => value.toLowerCase().includes(q),
-        )
-      const matchesFormat =
-        formatFilter === "any" ||
-        (formatFilter === "vinyl"
-          ? result.format.includes("Vinyl")
-          : result.format === "CD")
-      return matchesQuery && matchesFormat
-    })
+  useEffect(() => {
+    if (!query.trim()) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await searchAlbum(query, formatFilter)
+        if (!cancelled) setResults(data.results ?? [])
+      } catch {
+        if (!cancelled) {
+          setError("Could not reach Discogs. Check the connection and try again.")
+          setResults([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }, 400)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [query, formatFilter])
+
+  const selectedMeta = selected ? parseTitle(selected.title) : null
+  const selectedCover = selected
+    ? selected.cover_image || selected.thumb
+    : ""
 
   const reset = () => {
     setSelected(null)
@@ -87,21 +152,22 @@ export const AddItemForm = () => {
     return (
       <Panel title="Checked in">
         <div className="flex flex-col gap-4 sm:flex-row">
-          <Image
-            src={selected.cover}
-            alt=""
-            width={120}
-            height={120}
-            className="h-28 w-28 shrink-0 border-2 border-ink object-cover"
-          />
+          <CoverArt src={selectedCover} className="h-28 w-28" />
           <div className="flex flex-col gap-2">
             <h2 className="font-bevan text-2xl font-medium italic text-ink">
-              {selected.title}
+              {selectedMeta?.title}
             </h2>
             <p className="font-aleo text-sm text-muted">
-              {selected.artist} · {selected.year} ·{" "}
-              {formatShort[selected.format]}
+              {[selectedMeta?.artist, selected.year, selected.country]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
+            <p className="font-aleo text-sm text-muted">
+              {selected.format?.join(" · ")}
+            </p>
+            {selected.barcode?.length ? (
+              <Barcodes codes={selected.barcode} />
+            ) : null}
             <p className="font-aleo text-sm text-ink">
               {ownership === "house"
                 ? "Filed as a house copy."
@@ -139,11 +205,10 @@ export const AddItemForm = () => {
                   type="button"
                   onClick={() => setFormatFilter(f)}
                   aria-pressed={formatFilter === f}
-                  className={`cursor-pointer px-4 py-1.5 font-courier-prime text-xs font-bold tracking-widest uppercase transition-colors ${
-                    formatFilter === f
-                      ? "bg-ink text-paper"
-                      : "bg-paper text-ink hover:bg-surface-2"
-                  }`}
+                  className={`cursor-pointer px-4 py-1.5 font-courier-prime text-xs font-bold tracking-widest uppercase transition-colors ${formatFilter === f
+                    ? "bg-ink text-paper"
+                    : "bg-paper text-ink hover:bg-surface-2"
+                    }`}
                 >
                   {f === "any" ? "Any" : f === "vinyl" ? "Vinyl" : "CD"}
                 </button>
@@ -154,59 +219,78 @@ export const AddItemForm = () => {
           <Field
             label="Search the catalogue"
             htmlFor="discogs-search"
-            hint="Searches Discogs. Example results are shown until the API token is connected."
+            hint="Searches Discogs by release title or barcode. Match the barcode on your copy to pick the right pressing."
           >
             <Input
               id="discogs-search"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. In Rainbows"
+              placeholder="e.g. In Rainbows or 198029432510"
             />
           </Field>
 
-          {results.length === 0 ? (
+          {!query.trim() ? (
+            <p className="border-2 border-dashed border-ink/40 bg-surface-2 px-4 py-6 text-center font-aleo text-sm text-muted">
+              Type a release, artist, or barcode to search Discogs.
+            </p>
+          ) : error ? (
+            <p className="border-2 border-dashed border-rust bg-surface-2 px-4 py-6 text-center font-aleo text-sm text-rust">
+              {error}
+            </p>
+          ) : loading ? (
+            <p className="border-2 border-dashed border-ink/40 bg-surface-2 px-4 py-6 text-center font-aleo text-sm text-muted">
+              Searching Discogs…
+            </p>
+          ) : results.length === 0 ? (
             <p className="border-2 border-dashed border-ink/40 bg-surface-2 px-4 py-6 text-center font-aleo text-sm text-muted">
               No releases match. Try another spelling, or check in the item
               manually below.
             </p>
           ) : (
             <ul className="flex flex-col divide-y divide-ink/15 border-2 border-ink">
-              {results.map((result) => (
-                <li key={result.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelected(result)
-                      setSubmitted(false)
-                    }}
-                    className={`flex w-full cursor-pointer items-center gap-4 px-3 py-3 text-left transition-colors hover:bg-surface-2 ${
-                      selected?.id === result.id ? "bg-surface" : ""
-                    }`}
-                  >
-                    <Image
-                      src={result.cover}
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 shrink-0 border-2 border-ink object-cover"
-                    />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-bevan text-base leading-tight text-ink">
-                        {result.title}
+              {results.map((result) => {
+                const meta = parseTitle(result.title)
+                return (
+                  <li key={result.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelected(result)
+                        setSubmitted(false)
+                      }}
+                      className={`flex w-full cursor-pointer items-start gap-4 px-3 py-3 text-left transition-colors hover:bg-surface-2 ${selected?.id === result.id ? "bg-surface" : ""
+                        }`}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="truncate font-bevan text-base leading-tight text-ink">
+                            {meta.title}
+                          </span>
+                          {meta.artist ? (
+                            <span className="truncate font-aleo text-xs text-muted">
+                              {meta.artist}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="truncate font-aleo text-xs text-muted">
+                          {[result.year, result.country, result.format?.join(" · ")]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        {result.barcode?.length ? (
+                          <Barcodes codes={result.barcode} />
+                        ) : null}
                       </span>
-                      <span className="truncate font-aleo text-xs text-muted">
-                        {result.artist} · {result.year} · {result.label}
+                      <span className="ml-auto shrink-0">
+                        <Badge tone="outline">
+                          {result.format?.[0] ?? "—"}
+                        </Badge>
                       </span>
-                    </span>
-                    <span className="ml-auto shrink-0">
-                      <Badge tone="outline">
-                        {formatShort[result.format]}
-                      </Badge>
-                    </span>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -221,21 +305,23 @@ export const AddItemForm = () => {
               setSubmitted(true)
             }}
           >
-            <div className="flex items-center gap-4 border-2 border-ink bg-surface-2 p-3">
-              <Image
-                src={selected.cover}
-                alt=""
-                width={72}
-                height={72}
-                className="h-16 w-16 shrink-0 border-2 border-ink object-cover"
-              />
-              <div className="flex flex-col">
+            <div className="flex items-start gap-4 border-2 border-ink bg-surface-2 p-3">
+              <CoverArt src={selectedCover} className="h-16 w-16" />
+              <div className="flex flex-col gap-1">
                 <span className="font-bevan text-lg leading-tight text-ink">
-                  {selected.title}
+                  {selectedMeta?.title}
                 </span>
                 <span className="font-aleo text-sm text-muted">
-                  {selected.artist} · {selected.year} · {selected.genre}
+                  {[selectedMeta?.artist, selected.year, selected.country]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
+                <span className="font-aleo text-sm text-muted">
+                  {selected.format?.join(" · ")}
+                </span>
+                {selected.barcode?.length ? (
+                  <Barcodes codes={selected.barcode} />
+                ) : null}
               </div>
             </div>
 
@@ -250,11 +336,10 @@ export const AddItemForm = () => {
                     type="button"
                     onClick={() => setOwnership(choice.key)}
                     aria-pressed={ownership === choice.key}
-                    className={`flex cursor-pointer flex-col gap-1 border-2 border-ink p-4 text-left transition-transform active:translate-y-px ${
-                      ownership === choice.key
-                        ? "bg-signal"
-                        : "bg-paper hover:bg-surface-2"
-                    }`}
+                    className={`flex cursor-pointer flex-col gap-1 border-2 border-ink p-4 text-left transition-transform active:translate-y-px ${ownership === choice.key
+                      ? "bg-signal"
+                      : "bg-paper hover:bg-surface-2"
+                      }`}
                   >
                     <span className="font-courier-prime text-xs font-bold tracking-widest uppercase text-ink">
                       {choice.title}
