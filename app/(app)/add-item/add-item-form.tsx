@@ -1,18 +1,32 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useTransition } from "react"
 import Image from "next/image"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { Field, Input, Select, Textarea } from "@/app/components/ui/field"
 import { Panel } from "@/app/components/ui/panel"
-import { conditions, type Condition, type Ownership } from "@/app/lib/view"
+import { addItem } from "@/app/actions/items"
+import {
+  conditions,
+  type Condition,
+  type MediaFormat,
+  type Ownership,
+} from "@/app/lib/view"
 import {
   searchAlbum,
   type DiscogsSearchResult,
 } from "@/app/lib/add-item/searchAlbum"
 
 type FormatFilter = "any" | "vinyl" | "cd"
+
+const toMediaFormat = (discogs: string[] = []): MediaFormat => {
+  const joined = discogs.join(" ").toLowerCase()
+  if (joined.includes("cassette")) return "Cassette"
+  if (joined.includes("cd") && !joined.includes("vinyl")) return "CD"
+  if (joined.includes('7"') || joined.includes("ep")) return 'Vinyl EP (7")'
+  return 'Vinyl LP (12")'
+}
 
 const parseTitle = (title: string) => {
   const [artist, ...rest] = title.split(" - ")
@@ -106,6 +120,8 @@ export const AddItemForm = () => {
   const [location, setLocation] = useState("")
   const [notes, setNotes] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
 
   useEffect(() => {
     if (!query.trim()) return
@@ -136,6 +152,34 @@ export const AddItemForm = () => {
     ? selected.cover_image || selected.thumb
     : ""
 
+  const checkIn = () => {
+    if (!selected) return
+    setSubmitError(null)
+
+    startTransition(async () => {
+      const result = await addItem({
+        title: selectedMeta?.title || selected.title,
+        artist: selectedMeta?.artist || "Unknown",
+        year: selected.year || new Date().getFullYear(),
+        genre: selected.genre?.[0] || "Unknown",
+        label: selected.label?.[0] || "Unknown",
+        format: toMediaFormat(selected.format),
+        ownership,
+        ownerName,
+        ownerContact,
+        condition,
+        location,
+        notes,
+      })
+
+      if (result.ok) {
+        setSubmitted(true)
+      } else {
+        setSubmitError(result.message)
+      }
+    })
+  }
+
   const reset = () => {
     setSelected(null)
     setQuery("")
@@ -146,6 +190,7 @@ export const AddItemForm = () => {
     setLocation("")
     setNotes("")
     setSubmitted(false)
+    setSubmitError(null)
   }
 
   if (submitted && selected) {
@@ -175,7 +220,7 @@ export const AddItemForm = () => {
               {location ? ` Stored at ${location}.` : ""}
             </p>
             <p className="font-courier-prime text-[11px] tracking-wide text-muted">
-              Preview only — the database write is wired in the next pass.
+              Saved to the collection.
             </p>
             <div className="pt-1">
               <Button onClick={reset}>Check in another</Button>
@@ -302,7 +347,7 @@ export const AddItemForm = () => {
             className="flex flex-col gap-6"
             onSubmit={(e) => {
               e.preventDefault()
-              setSubmitted(true)
+              checkIn()
             }}
           >
             <div className="flex items-start gap-4 border-2 border-ink bg-surface-2 p-3">
@@ -379,7 +424,7 @@ export const AddItemForm = () => {
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Condition" htmlFor="new-condition">
+              <Field label="Condition *" htmlFor="new-condition">
                 <Select
                   id="new-condition"
                   value={condition}
@@ -393,7 +438,7 @@ export const AddItemForm = () => {
                 </Select>
               </Field>
               <Field
-                label="Location"
+                label="Location *"
                 htmlFor="new-location"
                 hint="Shelf, cabinet, or repair bench."
               >
@@ -406,7 +451,7 @@ export const AddItemForm = () => {
               </Field>
             </div>
 
-            <Field label="Staff notes" htmlFor="new-notes">
+            <Field label="Staff notes (Optional)" htmlFor="new-notes">
               <Textarea
                 id="new-notes"
                 rows={3}
@@ -416,11 +461,25 @@ export const AddItemForm = () => {
               />
             </Field>
 
+            {submitError ? (
+              <p
+                role="alert"
+                className="border-2 border-rust bg-surface-2 px-3 py-2 font-courier-prime text-xs font-bold text-rust"
+              >
+                {submitError}
+              </p>
+            ) : null}
+
             <div className="flex flex-wrap items-center gap-4 border-t-2 border-ink/10 pt-4">
-              <Button type="submit" variant="primary">
-                Check in record
+              <Button type="submit" variant="primary" disabled={pending}>
+                {pending ? "Saving…" : "Check in record"}
               </Button>
-              <Button type="button" variant="ghost" onClick={reset}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={reset}
+                disabled={pending}
+              >
                 Start over
               </Button>
             </div>

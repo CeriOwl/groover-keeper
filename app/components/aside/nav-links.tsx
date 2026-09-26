@@ -3,14 +3,17 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const links = [
+const baseLinks = [
   { title: "Dashboard", link: "/dashboard" },
   { title: "Inventory", link: "/inventory" },
   { title: "Add item", link: "/add-item" },
 ]
 
-export const NavLinks = () => {
+export const NavLinks = ({ isAdmin = false }: { isAdmin?: boolean }) => {
   const pathname = usePathname()
+  const links = isAdmin
+    ? [...baseLinks, { title: "Staff", link: "/staff" }]
+    : baseLinks
   return (
     <nav className="flex flex-row gap-2 overflow-x-auto md:flex-col">
       {links.map((e) => {

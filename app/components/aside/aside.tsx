@@ -1,9 +1,10 @@
 import { logout } from "@/app/actions/auth"
 import { NavLinks } from "./nav-links"
 import { getUser } from "@/app/lib/aside/getUser"
+import { ADMIN_ROLE_ID } from "@/app/lib/permissions"
 
 export const Aside = async () => {
-  const { username, role } = await getUser()
+  const { username, role, roleId } = await getUser()
   return (
     <aside className="border-b-2 border-ink bg-ink px-5 py-5 md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:justify-between md:gap-10 md:border-b-0 md:border-r-2 md:px-6 md:py-8">
       <div className="flex flex-col gap-6 md:gap-10">
@@ -25,7 +26,7 @@ export const Aside = async () => {
             </button>
           </form>
         </div>
-        <NavLinks />
+        <NavLinks isAdmin={roleId === ADMIN_ROLE_ID} />
       </div>
 
       <div className="hidden flex-col gap-4 md:flex">

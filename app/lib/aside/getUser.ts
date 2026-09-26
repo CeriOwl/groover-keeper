@@ -12,8 +12,10 @@ export async function getUser() {
   const userId = String(jwt?.sub)
 
   const [user] = await db.select({
+    idPublic: staffTable.idPublic,
     username: staffTable.username,
-    role: roleTable.name
+    role: roleTable.name,
+    roleId: staffTable.roleId,
   })
     .from(staffTable)
     .where(eq(staffTable.idPublic, userId))

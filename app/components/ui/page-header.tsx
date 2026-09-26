@@ -16,7 +16,7 @@ export const PageHeader = ({
           {title}
         </h1>
         {description ? (
-          <p className="max-w-[60ch] font-aleo text-sm text-muted">
+          <p className="max-w-[64ch] font-aleo text-sm text-muted">
             {description}
           </p>
         ) : null}

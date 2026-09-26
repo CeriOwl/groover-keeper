@@ -10,6 +10,7 @@ import {
   itemTable,
 } from "./schema";
 import { randomUUID } from "crypto";
+import { hashSync } from "bcrypt";
 
 const main = async () => {
   const roles = await db
@@ -72,20 +73,20 @@ const main = async () => {
     .values([
       {
         username: "jdoe",
-        password: "hashed_password_1", // replace with a real hash in practice
+        password: hashSync("hashed_password_1", 10), // bcrypt hash of the seed password
         roleId: roles.find((r) => r.name === "Admin")!.id,
         createdAt: new Date(),
         idPublic: randomUUID(),
       },
       {
         username: "asmith",
-        password: "hashed_password_2",
+        password: hashSync("hashed_password_2", 10),
         roleId: roles.find((r) => r.name === "Manager")!.id,
         idPublic: randomUUID(),
       },
       {
         username: "bwilliams",
-        password: "hashed_password_3",
+        password: hashSync("hashed_password_3", 10),
         roleId: roles.find((r) => r.name === "Barista")!.id,
         idPublic: randomUUID(),
       },
