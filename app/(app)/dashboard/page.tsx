@@ -5,7 +5,7 @@ import { buttonClass } from "@/app/components/ui/button"
 import { PageHeader } from "@/app/components/ui/page-header"
 import { Panel } from "@/app/components/ui/panel"
 import { StatCrate } from "@/app/components/ui/stat-crate"
-import { activity, items } from "@/app/lib/mock-data"
+import { getActivity, getItems } from "@/app/db/item"
 import {
   formatShort,
   isInBuilding,
@@ -15,7 +15,10 @@ import {
 } from "@/app/lib/view"
 import { formatDateTime } from "@/app/lib/format"
 
-const Dashboard = () => {
+const Dashboard = async () => {
+  const items = await getItems()
+  const activity = await getActivity(6)
+
   const total = items.length
   const house = items.filter((i) => i.ownership === "house")
   const loans = items.filter((i) => i.ownership === "loan")
@@ -130,14 +133,22 @@ const Dashboard = () => {
           {nowPlaying ? (
             <Panel title="On the turntable">
               <div className="flex flex-col gap-5 sm:flex-row">
-                <Image
-                  src={nowPlaying.cover}
-                  alt={`${nowPlaying.title} by ${nowPlaying.artist} cover`}
-                  width={160}
-                  height={160}
-                  priority
-                  className="h-40 w-40 shrink-0 border-2 border-ink object-cover"
-                />
+                {nowPlaying.cover ? (
+                  <Image
+                    src={nowPlaying.cover}
+                    alt={`${nowPlaying.title} by ${nowPlaying.artist} cover`}
+                    width={160}
+                    height={160}
+                    priority
+                    className="h-40 w-40 shrink-0 border-2 border-ink object-cover"
+                  />
+                ) : (
+                  <div className="flex h-40 w-40 shrink-0 items-center justify-center border-2 border-ink bg-surface-2">
+                    <span className="font-courier-prime text-[10px] tracking-widest uppercase text-muted">
+                      No art
+                    </span>
+                  </div>
+                )}
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-0.5">
                     <h3 className="font-bevan text-2xl font-medium leading-tight text-ink">

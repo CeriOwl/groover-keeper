@@ -15,6 +15,7 @@ import {
 } from "../db/schema"
 import { AddItemSchema, type AddItemInput, type AddItemResult } from "../lib/definitions"
 import { getUser } from "../lib/aside/getUser"
+import { HOUSE_OWNER } from "../lib/view"
 
 const DEFAULT_STATUS = "In Collection"
 const DEFAULT_ACTION = "Checked In"
@@ -82,7 +83,7 @@ export async function addItem(input: AddItemInput): Promise<AddItemResult> {
     const [owner] = await tx
       .insert(ownerTable)
       .values({
-        name: data.ownership === "house" ? null : data.ownerName,
+        name: data.ownership === "house" ? HOUSE_OWNER : data.ownerName,
         contact: data.ownerContact || null,
         date: new Date().toISOString().slice(0, 10),
         location: data.location,

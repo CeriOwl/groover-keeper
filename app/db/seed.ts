@@ -83,12 +83,14 @@ const main = async () => {
         password: hashSync("hashed_password_2", 10),
         roleId: roles.find((r) => r.name === "Manager")!.id,
         idPublic: randomUUID(),
+        createdAt: new Date(),
       },
       {
         username: "bwilliams",
         password: hashSync("hashed_password_3", 10),
         roleId: roles.find((r) => r.name === "Barista")!.id,
         idPublic: randomUUID(),
+        createdAt: new Date(),
       },
     ])
     .returning();

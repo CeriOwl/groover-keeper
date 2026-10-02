@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
-import Image from "next/image"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { Field, Input, Select, Textarea } from "@/app/components/ui/field"
@@ -32,35 +31,6 @@ const parseTitle = (title: string) => {
   const [artist, ...rest] = title.split(" - ")
   if (rest.length === 0) return { artist: "", title }
   return { artist, title: rest.join(" - ") }
-}
-
-const CoverArt = ({
-  src,
-  className,
-}: {
-  src: string
-  className: string
-}) => {
-  if (!src) {
-    return (
-      <div
-        className={`${className} flex shrink-0 items-center justify-center border-2 border-ink bg-surface-2`}
-      >
-        <span className="font-courier-prime text-[10px] tracking-widest uppercase text-muted">
-          No art
-        </span>
-      </div>
-    )
-  }
-  return (
-    <Image
-      src={src}
-      alt=""
-      width={120}
-      height={120}
-      className={`${className} shrink-0 border-2 border-ink object-cover`}
-    />
-  )
 }
 
 const Barcodes = ({ codes }: { codes: string[] }) => {
@@ -121,6 +91,9 @@ export const AddItemForm = () => {
   const [notes, setNotes] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<
+    Record<string, string[] | undefined>
+  >({})
   const [pending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -148,13 +121,11 @@ export const AddItemForm = () => {
   }, [query, formatFilter])
 
   const selectedMeta = selected ? parseTitle(selected.title) : null
-  const selectedCover = selected
-    ? selected.cover_image || selected.thumb
-    : ""
 
   const checkIn = () => {
     if (!selected) return
     setSubmitError(null)
+    setFieldErrors({})
 
     startTransition(async () => {
       const result = await addItem({
@@ -176,6 +147,7 @@ export const AddItemForm = () => {
         setSubmitted(true)
       } else {
         setSubmitError(result.message)
+        setFieldErrors(result.errors ?? {})
       }
     })
   }
@@ -191,13 +163,13 @@ export const AddItemForm = () => {
     setNotes("")
     setSubmitted(false)
     setSubmitError(null)
+    setFieldErrors({})
   }
 
   if (submitted && selected) {
     return (
       <Panel title="Checked in">
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <CoverArt src={selectedCover} className="h-28 w-28" />
+        <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <h2 className="font-bevan text-2xl font-medium italic text-ink">
               {selectedMeta?.title}
@@ -323,9 +295,6 @@ export const AddItemForm = () => {
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
-                        {result.barcode?.length ? (
-                          <Barcodes codes={result.barcode} />
-                        ) : null}
                       </span>
                       <span className="ml-auto shrink-0">
                         <Badge tone="outline">
@@ -351,7 +320,6 @@ export const AddItemForm = () => {
             }}
           >
             <div className="flex items-start gap-4 border-2 border-ink bg-surface-2 p-3">
-              <CoverArt src={selectedCover} className="h-16 w-16" />
               <div className="flex flex-col gap-1">
                 <span className="font-bevan text-lg leading-tight text-ink">
                   {selectedMeta?.title}
@@ -399,7 +367,11 @@ export const AddItemForm = () => {
 
             {ownership !== "house" ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Customer name" htmlFor="owner-name">
+                <Field
+                  label="Customer name"
+                  htmlFor="owner-name"
+                  error={fieldErrors.ownerName?.[0]}
+                >
                   <Input
                     id="owner-name"
                     value={ownerName}
@@ -412,6 +384,7 @@ export const AddItemForm = () => {
                   label="Contact"
                   htmlFor="owner-contact"
                   hint="Email or phone, so we can reach them."
+                  error={fieldErrors.ownerContact?.[0]}
                 >
                   <Input
                     id="owner-contact"
@@ -424,7 +397,11 @@ export const AddItemForm = () => {
             ) : null}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Condition *" htmlFor="new-condition">
+              <Field
+                label="Condition *"
+                htmlFor="new-condition"
+                error={fieldErrors.condition?.[0]}
+              >
                 <Select
                   id="new-condition"
                   value={condition}
@@ -441,17 +418,23 @@ export const AddItemForm = () => {
                 label="Location *"
                 htmlFor="new-location"
                 hint="Shelf, cabinet, or repair bench."
+                error={fieldErrors.location?.[0]}
               >
                 <Input
                   id="new-location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Shelf A1"
+                  required
                 />
               </Field>
             </div>
 
-            <Field label="Staff notes (Optional)" htmlFor="new-notes">
+            <Field
+              label="Staff notes (Optional)"
+              htmlFor="new-notes"
+              error={fieldErrors.notes?.[0]}
+            >
               <Textarea
                 id="new-notes"
                 rows={3}

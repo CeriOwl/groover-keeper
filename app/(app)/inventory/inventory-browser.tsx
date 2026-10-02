@@ -250,13 +250,21 @@ export const InventoryBrowser = ({
                       href={`/inventory/${item.id}`}
                       className="flex items-center gap-3"
                     >
-                      <Image
-                        src={item.cover}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 shrink-0 border-2 border-ink object-cover"
-                      />
+                      {item.cover ? (
+                        <Image
+                          src={item.cover}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 shrink-0 border-2 border-ink object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-ink bg-surface-2">
+                          <span className="font-courier-prime text-[8px] tracking-widest uppercase text-muted">
+                            No art
+                          </span>
+                        </span>
+                      )}
                       <span className="flex min-w-0 flex-col">
                         <span className="truncate font-bevan text-base leading-tight text-ink">
                           {item.title}

@@ -56,8 +56,8 @@ export interface ActivityEntry {
 // column. The café's own records are represented by a reserved owner row.
 export const HOUSE_OWNER = "Groove Keeper — House Collection"
 
-export const getOwnership = (ownerName: string): Ownership => {
-  if (ownerName === HOUSE_OWNER) return "house"
+export const getOwnership = (ownerName: string | null | undefined): Ownership => {
+  if (!ownerName || ownerName === HOUSE_OWNER) return "house"
   if (ownerName.toLowerCase().includes("donat")) return "donation"
   return "loan"
 }

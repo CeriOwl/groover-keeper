@@ -3,7 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Badge } from "@/app/components/ui/badge"
 import { Panel } from "@/app/components/ui/panel"
-import { activity, items } from "@/app/lib/mock-data"
+import { getItemActivity, getItemById } from "@/app/db/item"
 import { formatDate, formatDateTime } from "@/app/lib/format"
 import {
   formatShort,
@@ -18,11 +18,11 @@ const ItemDetail = async ({
   params: Promise<{ id: string }>
 }) => {
   const { id } = await params
-  const item = items.find((entry) => entry.id === id)
+  const item = await getItemById(id)
 
   if (!item) notFound()
 
-  const history = activity.filter((entry) => entry.itemId === item.id)
+  const history = await getItemActivity(id)
   const ownership = ownershipMeta[item.ownership]
   const status = statusMeta[item.status]
 
@@ -47,14 +47,22 @@ const ItemDetail = async ({
       </Link>
 
       <header className="flex flex-col gap-6 border-b-2 border-ink pb-6 sm:flex-row">
-        <Image
-          src={item.cover}
-          alt={`${item.title} by ${item.artist} cover`}
-          width={200}
-          height={200}
-          priority
-          className="h-52 w-52 shrink-0 border-2 border-ink object-cover crate-shadow"
-        />
+        {item.cover ? (
+          <Image
+            src={item.cover}
+            alt={`${item.title} by ${item.artist} cover`}
+            width={200}
+            height={200}
+            priority
+            className="h-52 w-52 shrink-0 border-2 border-ink object-cover crate-shadow"
+          />
+        ) : (
+          <div className="flex h-52 w-52 shrink-0 items-center justify-center border-2 border-ink bg-surface-2 crate-shadow">
+            <span className="font-courier-prime text-[10px] tracking-widest uppercase text-muted">
+              No art
+            </span>
+          </div>
+        )}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <h1 className="font-bevan text-4xl font-medium italic leading-none text-ink md:text-5xl">
